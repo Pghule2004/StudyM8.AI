@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StudyM8.AI - Smart Text to Speech</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@2.1.5/dist/tesseract.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+  body { font-family: 'Poppins', sans-serif; text-align: center; margin: 0; padding: 0; min-height: 100vh;
+         background: linear-gradient(120deg, #1e3a5f, #f8f9fa); background-size: 400% 400%; animation: gradientAnimation 15s ease infinite;
+         color: #1a1a1a; overflow-x: hidden; position: relative; }
+  @keyframes gradientAnimation {0% {background-position: 0% 50%;} 50% {background-position: 100% 50%;} 100% {background-position: 0% 50%;}}
+  header { background-color: #0d1b3d; padding: 20px 0; box-shadow: 0 4px 15px rgba(0,0,0,0.3); color: #ffffff;
+           font-size: 3em; font-weight: 700; letter-spacing: 1px; border-radius: 0 0 15px 15px; }
+  p.tagline { color: #fdfdfd; font-size: 1.2em; margin: 10px 0 20px; }
+  main { margin: 30px auto; background: #fefefe; border-radius: 20px; box-shadow: 0px 8px 25px rgba(0,0,0,0.15);
+         padding: 30px; display: inline-block; width: 90%; max-width: 750px; position: relative; z-index: 1; }
+  h2 { color: #0056b3; margin-top: 0; }
+  p.description { color: #555; font-size: 1em; margin-bottom: 20px; }
+  .steps { text-align: left; background-color: #e6f0ff; padding: 15px; border-radius: 12px; margin-bottom: 20px;
+            font-size: 0.95em; color: #1e3a5f; }
+  textarea { width: 90%; height: 150px; padding: 10px; border-radius: 12px; border: 2px solid #1e3a5f;
+             resize: none; font-size: 16px; background-color: #f9f9f9; margin-top: 10px; }
+  label { display: block; margin-top: 15px; font-weight: 600; color: #1e3a5f; }
+  input { padding: 6px; font-size: 16px; border-radius: 6px; border: 1px solid #1e3a5f; background-color: #fefefe; }
+  button { margin: 12px 5px; padding: 12px 28px; background: #0d84ff; color: white; border: none; border-radius: 10px;
+           cursor: pointer; font-size: 16px; transition: 0.3s; }
+  button:hover { background: #0656a1; transform: scale(1.05); }
+  #display { margin-top: 25px; font-size: 22px; font-weight: bold; color: #1e3a5f; }
+  .highlight { background: #b0d8ff; border-radius: 5px; padding: 3px 6px; }
+  footer { margin-top: 40px; color: #1e3a5f; font-size: 0.9em; }
+  .dot { position: absolute; border-radius: 50%; background: rgba(255,255,255,0.3); width: 10px; height: 10px;
+         animation: floatDots 10s linear infinite; }
+  @keyframes floatDots { 0% { transform: translateY(0) translateX(0); } 50% { transform: translateY(-50px) translateX(50px); }
+                         100% { transform: translateY(0) translateX(0); } }
+</style>
+</head>
+<body>
+
+<header>StudyM8.AI</header>
+<p class="tagline">Your smart study companion that turns text into speech — word by word, thoughtfully and at your pace.</p>
+
+<main>
+<h2>🎧 Smart Word-by-Word Text to Speech</h2>
+<p class="description">Focus better, write faster, and learn efficiently by listening to your text one word at a time. You can also extract text from images!</p>
+
+<div class="steps">
+<strong>How to use:</strong>
+<ol>
+<li>Enter your text in the textarea OR upload an image with text.</li>
+<li>Adjust the delay between words and speech rate if needed.</li>
+<li>Click <strong>Start</strong> to listen word by word.</li>
+<li>Use <strong>Pause / Resume / Stop</strong> to control playback.</li>
+<li>If using an image, click <strong>Extract & Read</strong> to convert it to speech.</li>
+</ol>
+</div>
+
+<input type="file" id="imageInput" accept="image/*">
+<button onclick="extractText()">📄 Extract & Read</button>
+
+<textarea id="inputText" placeholder="Enter or paste your text here..."></textarea><br>
+
+<label>⏱ Delay between words (seconds):</label>
+<input type="number" id="delay" value="0.8" step="0.1" min="0">
+
+<label>🎚 Speech speed (rate):</label>
+<input type="number" id="rate" value="1" step="0.1" min="0.1" max="2">
+
+<br><br>
+<button onclick="startSpeaking()">▶️ Start</button>
+<button onclick="pauseSpeaking()">⏸ Pause</button>
+<button onclick="resumeSpeaking()">🔁 Resume</button>
+<button onclick="stopSpeaking()">⏹ Stop</button>
+
+<div id="display"></div>
+</main>
+
+<footer>
+<p>💡 Purpose: StudyM8.AI helps students enhance concentration and productivity by converting written notes or images into slow, word-by-word speech.</p>
+<p>© 2025 StudyM8.AI | Made for learners by learners.</p>
+<p>Created by Pradeep Ghule</p>
+</footer>
+
+<script>
+for (let i = 0; i < 30; i++) {
+  let dot = document.createElement('div');
+  dot.className = 'dot';
+  dot.style.top = Math.random() * window.innerHeight + 'px';
+  dot.style.left = Math.random() * window.innerWidth + 'px';
+  dot.style.width = dot.style.height = (5 + Math.random() * 10) + 'px';
+  dot.style.animationDuration = (5 + Math.random() * 10) + 's';
+  document.body.appendChild(dot);
+}
+
+let isPaused = false;
+let stopRequested = false;
+
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function startSpeaking() {
+const text = document.getElementById('inputText').value.trim();
+const delay = parseFloat(document.getElementById('delay').value);
+const rate = parseFloat(document.getElementById('rate').value);
+const display = document.getElementById('display');
+if (!text) { alert("Please enter some text first!"); return; }
+const words = text.split(/\s+/);
+isPaused = false;
+stopRequested = false;
+display.innerHTML = '';
+speechSynthesis.cancel();
+for (let i = 0; i < words.length; i++) {
+if (stopRequested) break;
+while (isPaused) await sleep(200);
+display.innerHTML = words.map((w,index)=>index===i?`<span class='highlight'>${w}</span>`:w).join(' ');
+const utter = new SpeechSynthesisUtterance(words[i]);
+utter.rate = rate;
+speechSynthesis.speak(utter);
+await new Promise(resolve=>utter.onend=resolve);
+await sleep(delay*1000);
+}
+}
+function pauseSpeaking() { isPaused = true; speechSynthesis.pause(); }
+function resumeSpeaking() { isPaused = false; speechSynthesis.resume(); }
+function stopSpeaking() { stopRequested = true; speechSynthesis.cancel(); document.getElementById('display').innerHTML=''; }
+
+function extractText() {
+const image = document.getElementById('imageInput').files[0];
+if (!image) { alert('Please select an image first!'); return; }
+Tesseract.recognize(image,'eng',{logger: m=>console.log(m)}).then(({data:{text}})=>{
+document.getElementById('inputText').value=text;
+startSpeaking();
+});
+}
+</script>
+
+</body>
+</html>
