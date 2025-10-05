@@ -1,1 +1,1 @@
-# StudyM8.AI
+# Studymate.AI
